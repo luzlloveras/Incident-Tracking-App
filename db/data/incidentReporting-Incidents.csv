@@ -1,0 +1,8 @@
+ID;incidentId;incidentDescription;Customer_ID
+44d08b96-edfd-4e7f-92d0-593d95aa1f83;INC001;Network connectivity issue;078862fa-5348-452a-8474-7f015db5e1c2
+008cf93f-b9c5-433d-aa2a-91a36822280b;INC002;Software crash;407500bf-8ee8-4102-a851-4d05c49fa553
+366894c9-896a-4a82-b40b-1ceb067f8033;INC003;Hardware failure;a5c43b88-7b98-4a6f-8623-46420833a38f
+3a483193-1ea9-4e08-aa87-76db9f30b73f;INC004;Data corruption;7733ba28-f53f-4cc5-b4ff-7c08025079db
+ca8c8958-e283-442f-8c14-d40558214b2a;INC005;Application error;c770696d-0b1e-4a45-9ac7-907b53eeec04
+1142336d-5267-4835-bc02-0e09da04b5bf;INC006;Printer malfunction;078862fa-5348-452a-8474-7f015db5e1c2
+ef035859-9a2f-491f-8630-324338cbddc7;INC007;Server outage;407500bf-8ee8-4102-a851-4d05c49fa553

@@ -1,0 +1,2 @@
+sap.ui.require(["sap/fe/test/JourneyRunner","incidentreportingapp/test/integration/FirstJourney","incidentreportingapp/test/integration/pages/IncidentsList","incidentreportingapp/test/integration/pages/IncidentsObjectPage"],function(e,n,t,i){"use strict";var e=new e({launchUrl:sap.ui.require.toUrl("incidentreportingapp")+"/index.html"});e.run({pages:{onTheIncidentsList:t,onTheIncidentsObjectPage:i}},n.run)});
+//# sourceMappingURL=opaTests.qunit.js.map

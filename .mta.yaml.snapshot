@@ -1,0 +1,219 @@
+_schema-version: '3.1'
+ID: Incident_Tracking_App
+version: 1.0.0
+description: A simple CAP project.
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - rm -rf build/dist
+        - mkdir -p build/dist
+        - rm -rf build/ui-deployer
+        - mkdir -p build/ui-deployer
+    - builder: custom
+      commands:
+        - npm install --production
+        - >-
+          bash -c "cds -v | grep 'cds-dk' || npm i --production --no-save
+          @sap/cds-dk @sap/mdk-tools"
+        - bash -c "export PATH=$PATH:$(pwd)/node_modules/.bin"
+        - cds build --production
+  after-all:
+    - builder: custom
+      commands:
+        - npm install
+modules:
+  - name: Incident_Tracking_App-incidentreportingapp
+    type: html5
+    path: app/incidentreportingapp
+    build-parameters:
+      builder: custom
+      commands:
+        - rm -rf dist-zip dist
+        - >-
+          npx -p @ui5/cli@^3.0.0 ui5 build --dest dist
+          --include-task=generateManifestBundle
+          --include-task=generateCachebusterInfo
+        - mkdir dist-zip
+        - >-
+          bash -c "cd dist && npx bestzip ../dist-zip/incidentreportingapp.zip
+          *"
+      _artifactName: incidentreportingapp.zip
+      supported-platforms: []
+      build-result: dist-zip
+  - name: Incident_Tracking_App-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm
+      ignore:
+        - node_modules
+        - package-lock.json
+    requires:
+      - name: Incident_Tracking_App-service-uaa
+      - name: Incident_Tracking_App-service-db
+  - name: Incident_Tracking_App-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      memory: 256MB
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    build-parameters:
+      builder: npm
+      ignore:
+        - node_modules
+        - package-lock.json
+    requires:
+      - name: Incident_Tracking_App-service-uaa
+      - name: Incident_Tracking_App-service-db
+      - name: Incident_Tracking_App-service-destination
+      - name: Incident_Tracking_App-service-metadata
+      - name: Incident_Tracking_App-service-connectivity
+      - name: Incident_Tracking_App-service-logs
+  - name: Incident_Tracking_App-aux-destinations
+    type: com.sap.application.content
+    parameters:
+      content:
+        subaccount:
+          existing_destinations_policy: update
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: Incident_Tracking_App-service-uaa
+              ServiceInstanceName: Incident_Tracking_App-uaa
+              ServiceKeyName: Incident_Tracking_App-uaa-key
+              sap.cloud.service: lcap.Incident_Tracking_App
+            - Authentication: OAuth2UserTokenExchange
+              Name: Incident_Tracking_App-app-srv
+              TokenServiceInstanceName: Incident_Tracking_App-uaa
+              TokenServiceKeyName: Incident_Tracking_App-uaa-key
+              URL: ~{srv-api/srv-url}
+              sap.cloud.service: lcap.Incident_Tracking_App
+            - Name: Incident_Tracking_App-service-html5-apps-repo-host
+              ServiceInstanceName: Incident_Tracking_App-html5-apps-repo-host
+              ServiceKeyName: Incident_Tracking_App-html5-apps-repo-host-key
+              sap.cloud.service: lcap.Incident_Tracking_App
+            - Authentication: OAuth2UserTokenExchange
+              Name: Incident_Tracking_App-incidentReportingSrv
+              TokenServiceInstanceName: Incident_Tracking_App-uaa
+              TokenServiceKeyName: Incident_Tracking_App-uaa-key
+              URL: ~{srv-api/srv-url}/incident-reporting-srv
+              sap.cloud.service: lcap.Incident_Tracking_App
+              sap.applicationdevelopment.actions.enabled: false
+              sap.build.usage: CAP
+              sap.processautomation.enabled: false
+              HTML5.DynamicDestination: false
+              WebIDEEnabled: false
+              MobileEnabled: false
+              AppgyverEnabled: false
+    build-parameters:
+      no-source: true
+    requires:
+      - name: Incident_Tracking_App-service-uaa
+        parameters:
+          service-key:
+            name: Incident_Tracking_App-uaa-key
+      - name: srv-api
+      - name: Incident_Tracking_App-service-html5-apps-repo-host
+        parameters:
+          service-key:
+            name: Incident_Tracking_App-html5-apps-repo-host-key
+      - name: Incident_Tracking_App-service-destination
+        parameters:
+          content-target: true
+  - name: Incident_Tracking_App-launchpad
+    type: html5
+    path: build/launchpad
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - >-
+          npx -p @ui5/cli@^3.0.0 ui5 build --dest dist
+          --include-task=generateManifestBundle
+          --include-task=generateCachebusterInfo
+        - bash -c "cd dist && npx bestzip ../../../build/dist/launchpad.zip *"
+        - rm -rf dist
+      _artifactName: launchpad.zip
+      supported-platforms: []
+      build-result: ../../build/dist
+  - name: Incident_Tracking_App-aux-ui-deployer
+    type: com.sap.application.content
+    path: build/ui-deployer
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: Incident_Tracking_App-incidentreportingapp
+          artifacts:
+            - incidentreportingapp.zip
+          target-path: resources
+        - name: Incident_Tracking_App-launchpad
+          artifacts:
+            - launchpad.zip
+          target-path: resources
+    requires:
+      - name: Incident_Tracking_App-service-html5-apps-repo-host
+        parameters:
+          content-target: true
+resources:
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      service-name: Incident_Tracking_App-uaa
+      path: xs-security.json
+      config:
+        oauth2-configuration:
+          redirect-uris:
+            - https://*.${default-domain}/login/*
+        xsappname: Incident_Tracking_App-${space}
+        role-collections: []
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-db
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+      service-name: Incident_Tracking_App-db
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-destination
+    parameters:
+      service: destination
+      service-plan: lite
+      service-name: Incident_Tracking_App-destination
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+  - type: org.cloudfoundry.user-provided-service
+    name: Incident_Tracking_App-service-metadata
+    parameters:
+      service: metadata
+      service-plan: standard
+      service-name: Incident_Tracking_App-metadata
+      config:
+        default-domain: ${default-domain}
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-connectivity
+    parameters:
+      service: connectivity
+      service-plan: lite
+      service-name: Incident_Tracking_App-connectivity
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-logs
+    parameters:
+      service: application-logs
+      service-plan: lite
+      service-name: Incident_Tracking_App-logs
+  - type: org.cloudfoundry.managed-service
+    name: Incident_Tracking_App-service-html5-apps-repo-host
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+      service-name: Incident_Tracking_App-html5-apps-repo-host

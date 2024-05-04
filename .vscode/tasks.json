@@ -1,0 +1,68 @@
+{
+  "version": "1.27.0",
+  "tasks": [
+    {
+      "label": "npm-install",
+      "type": "process",
+      "command": "npm",
+      "args": [
+        "install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "BuildMDK",
+      "type": "process",
+      "command": "npx",
+      "args": [
+        "mdk",
+        "build",
+        "--target",
+        "module",
+        "--ui5",
+        "--recursive"
+      ],
+      "dependsOn": [
+        "npm-install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "PreLaunchTask for Run Incident_Tracking_App",
+      "type": "process",
+      "command": "npx",
+      "args": [
+        "dev-cap-tools",
+        "gen-entrypoint"
+      ],
+      "dependsOn": [
+        "BuildMDK"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "type": "dpt.ptdeploy",
+      "label": "Deploy Incident_Tracking_App",
+      "taskType": "Deploy"
+    },
+    {
+      "type": "dpt.ptdeploy",
+      "label": "Enable Discovery and Deploy Incident_Tracking_App",
+      "taskType": "Deploy",
+      "enableDiscovery": "true"
+    },
+    {
+      "type": "build.mta",
+      "label": "Template: Build MTA: Incident_Tracking_App - PT",
+      "taskType": "Build",
+      "projectPath": "/home/user/projects/Incident_Tracking_App",
+      "extensions": []
+    }
+  ]
+}
